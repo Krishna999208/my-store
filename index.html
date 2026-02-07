@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Product Finder</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Custom styles for glassmorphism and electric blue theme */
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .dark .glass {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        body {
+            background: linear-gradient(135deg, #0f0f23 0%, #1e3a8a 100%);
+            color: #e2e8f0;
+        }
+        .electric-blue {
+            color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="min-h-screen font-sans">
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold electric-blue mb-2">Smart Product Finder</h1>
+            <p class="text-lg">Discover and order premium tech products effortlessly.</p>
+            <p class="text-sm mt-2">Stock Tracking: Manage inventory with real-time updates – a feature not found in cheaper websites. Privacy: Seller's number is hidden for a professional experience. No Extra Cost: Uses LocalStorage, perfect for students or small businesses with no database fees.</p>
+        </header>
+
+        <!-- Products Section -->
+        <section id="products" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Products will be dynamically loaded here -->
+        </section>
+
+        <!-- Admin Toggle Button -->
+        <div class="text-center mb-4">
+            <button id="adminToggle" class="glass px-6 py-2 rounded-lg electric-blue hover:bg-blue-600 transition">Admin Panel</button>
+        </div>
+
+        <!-- Admin Panel (Hidden by default) -->
+        <section id="adminPanel" class="glass p-6 rounded-lg hidden">
+            <h2 class="text-2xl font-bold mb-4 electric-blue">Admin Panel</h2>
+            <form id="addProductForm" class="mb-6">
+                <h3 class="text-xl mb-2">Add New Product</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="text" id="productTitle" placeholder="Product Title" class="glass px-4 py-2 rounded" required>
+                    <input type="number" id="productPrice" placeholder="Price" class="glass px-4 py-2 rounded" required>
+                    <input type="url" id="productImage" placeholder="Image URL" class="glass px-4 py-2 rounded" required>
+                    <input type="number" id="productStock" placeholder="Stock Quantity" class="glass px-4 py-2 rounded" required>
+                </div>
+                <button type="submit" class="mt-4 glass px-6 py-2 rounded-lg electric-blue hover:bg-blue-600 transition">Add Product</button>
+            </form>
+            <h3 class="text-xl mb-2">Update Stock</h3>
+            <div id="stockUpdateList" class="space-y-2">
+                <!-- Stock update items will be dynamically loaded here -->
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // WhatsApp number (hidden in JS for privacy)
+        const whatsappNumber = '1234567890'; // Replace with actual seller's WhatsApp number
+
+        // Sample products
+        const sampleProducts = [
+            { id: 1, title: 'Wireless Headphones', price: 99.99, image: 'https://source.unsplash.com/random?headphones', stock: 10 },
+            { id: 2, title: 'Smartwatch', price: 199.99, image: 'https://source.unsplash.com/random?smartwatch', stock: 5 },
+            { id: 3, title: 'Gaming Laptop', price: 1299.99, image: 'https://source.unsplash.com/random?laptop', stock: 3 },
+            { id: 4, title: 'Smartphone', price: 699.99, image: 'https://source.unsplash.com/random?smartphone', stock: 8 },
+            { id: 5, title: 'Tablet', price: 399.99, image: 'https://source.unsplash.com/random?tablet', stock: 12 },
+            { id: 6, title: 'Wireless Earbuds', price: 149.99, image: 'https://source.unsplash.com/random?earbuds', stock: 0 }
+        ];
+
+        // Load products from LocalStorage or use samples
+        let products = JSON.parse(localStorage.getItem('products')) || sampleProducts;
+        saveProducts();
+
+        // Function to save products to LocalStorage
+        function saveProducts() {
+            localStorage.setItem('products', JSON.stringify(products));
+        }
+
+        // Function to render products
+        function renderProducts() {
+            const productsContainer = document.getElementById('products');
+            productsContainer.innerHTML = '';
+            products.forEach(product => {
+                const stockStatus = product.stock > 0 ? 'In Stock' : 'Out of Stock';
+                const orderDisabled = product.stock <= 0 ? 'disabled' : '';
+                const card = `
+                    <div class="glass p-4 rounded-lg">
+                        <img src="${product.image}" alt="${product.title}" class="w-full h-48 object-cover rounded mb-4">
+                        <h3 class="text-xl font-bold mb-2">${product.title}</h3>
+                        <p class="text-lg mb-2">$${product.price}</p>
+                        <p class="mb-4 ${product.stock > 0 ? 'text-green-400' : 'text-red-400'}">${stockStatus} (${product.stock})</p>
+                        <button onclick="orderProduct(${product.id})" class="glass px-4 py-2 rounded-lg electric-blue hover:bg-blue-600 transition ${orderDisabled}" ${orderDisabled}>Order Now</button>
+                    </div>
+                `;
+                productsContainer.innerHTML += card;
+            });
+        }
+
+        // Function to handle ordering
+        function orderProduct(id) {
+            const product = products.find(p => p.id === id);
+            if (product.stock > 0) {
+                product.stock -= 1;
+                saveProducts();
+                renderProducts();
+                renderStockUpdateList();
+                const message = `I want to order ${product.title}, Quantity: 1. Remaining Stock: ${product.stock}`;
+                window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank');
+            }
+        }
+
+        // Admin Panel Toggle with Password
+        document.getElementById('adminToggle').addEventListener('click', () => {
+            const password = prompt('Enter Admin Password:');
+            if (password === 'admin123') { // Simple password, change as needed
+                document.getElementById('adminPanel').classList.toggle('hidden');
+            } else {
+                alert('Incorrect password!');
+            }
+        });
+
+        // Add Product Form
+        document.getElementById('addProductForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const title = document.getElementById('productTitle').value;
+            const price = parseFloat(document.getElementById('productPrice').value);
+            const image = document.getElementById('productImage').value;
+            const stock = parseInt(document.getElementById('productStock').value);
+            const newProduct = {
+                id: Date.now(), // Simple ID generation
+                title,
+                price,
+                image,
+                stock
+            };
+            products.push(newProduct);
+            saveProducts();
+            renderProducts();
+            renderStockUpdateList();
+            e.target.reset();
+        });
+
+        // Function to render stock update list
+        function renderStockUpdateList() {
+            const list = document.getElementById('stockUpdateList');
+            list.innerHTML = '';
+            products.forEach(product => {
+                const item = `
+                    <div class="flex justify-between items-center glass p-2 rounded">
+                        <span>${product.title} (Current: ${product.stock})</span>
+                        <input type="number" value="${product.stock}" onchange="updateStock(${product.id}, this.value)" class="w-20 px-2 py-1 rounded">
+                    </div>
+                `;
+                list.innerHTML += item;
+            });
+        }
+
+        // Function to update stock
+        function updateStock(id, newStock) {
+            const product = products.find(p => p.id === id);
+            product.stock = parseInt(newStock);
+            saveProducts();
+            renderProducts();
+            renderStockUpdateList();
+        }
+
+        // Initial render
+        renderProducts();
+        renderStockUpdateList();
+    </script>
+</body>
+</html>
